@@ -1,0 +1,276 @@
+:root {
+  /* Toss-like flat palette */
+  --bg: #ffffff;
+  --section: #f2f4f6;
+  --text: #191f28;
+  --sub: #8b95a1;
+  --line: #e5e8eb;
+  --primary: #3182f6;
+  --primary-press: #1b64da;
+  --stop: #f04452;
+  --stop-press: #d63a46;
+  --radius: 16px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.app {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 24px;
+}
+
+.screen {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 44px;
+}
+
+/* ---------- Hero / text ---------- */
+.hero {
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sub);
+}
+
+.eyebrow--live {
+  color: var(--stop);
+}
+
+.title {
+  margin: 0;
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+}
+
+.title .accent {
+  color: var(--primary);
+}
+
+.subtitle {
+  margin: 14px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--sub);
+}
+
+.subtitle--muted {
+  font-size: 14px;
+}
+
+.running-guide {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+}
+
+.running-guide b {
+  color: var(--primary);
+}
+
+/* ---------- Big circular buttons (flat) ---------- */
+.big-btn {
+  width: 200px;
+  height: 200px;
+  border: none;
+  border-radius: 50%;
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #ffffff;
+  cursor: pointer;
+  transition:
+    transform 0.1s ease,
+    background-color 0.15s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.big-btn:active {
+  transform: scale(0.97);
+}
+
+.big-btn--start {
+  background: var(--primary);
+}
+
+.big-btn--start:active {
+  background: var(--primary-press);
+}
+
+.big-btn--stop {
+  background: var(--stop);
+}
+
+.big-btn--stop:active {
+  background: var(--stop-press);
+}
+
+/* ---------- Result ---------- */
+.result-card {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 28px 20px;
+  text-align: center;
+}
+
+.result-elapsed {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+}
+
+.result-elapsed-num {
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-elapsed-unit {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--sub);
+}
+
+.result-diff {
+  margin: 6px 0 24px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.result-diff.is-early {
+  color: var(--primary);
+}
+
+.result-diff.is-late {
+  color: var(--stop);
+}
+
+/* 추정 상위/하위 % */
+.result-rank {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 20px 16px;
+  border-radius: 14px;
+  background: var(--section);
+}
+
+.result-rank-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sub);
+}
+
+.result-rank-value {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.result-rank-caption {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ---------- Actions ---------- */
+.actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.btn {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: var(--radius);
+  font-size: 17px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.1s ease,
+    background-color 0.15s ease;
+}
+
+.btn:active {
+  transform: scale(0.99);
+}
+
+.btn--primary {
+  color: #ffffff;
+  background: var(--primary);
+}
+
+.btn--primary:active {
+  background: var(--primary-press);
+}
+
+.btn--sub {
+  color: var(--text);
+  background: var(--section);
+}
+
+.btn--sub:active {
+  background: var(--line);
+}
+
+/* ---------- Ad banner ---------- */
+.ad-banner {
+  width: 100%;
+  min-height: 0;
+}
+
+.ad-banner:not(:empty) {
+  min-height: 96px;
+  border-top: 1px solid var(--line);
+}
+
+/* Desktop framing */
+@media (min-width: 481px) {
+  .app {
+    min-height: 100vh;
+    border-left: 1px solid var(--line);
+    border-right: 1px solid var(--line);
+  }
+}
