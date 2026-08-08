@@ -6,49 +6,123 @@ import {
   formatRank,
   pickGrade,
   shareResult,
-  submitScore,
   toSeconds,
   type TimingResult,
 } from "./lib/game";
+import { preloadInterstitial, showInterstitial } from "./lib/interstitialAd";
 
-type Phase = "idle" | "running" | "result";
+type Phase = "idle" | "ready" | "running" | "stopping" | "result" | "rewind";
+
+/** "준비…" 노출 시간. 이 뒤에 "시작!"이 뜨면서 계측이 시작된다. */
+const READY_MS = 1000;
+/** running 진입 후 "시작!"을 띄워두는 시간. */
+const GO_MS = 600;
+/** 멈춤 → 결과 사이의 계산 연출 시간. 기록에는 섞이지 않는다. */
+const STOPPING_MS = 700;
+/** 다시하기 → (광고) → 대기 사이의 로딩 연출 시간. */
+const REWIND_MS = 900;
+/** 다시하기 N회마다 전면광고를 1회 노출한다. */
+const AD_EVERY_N_RETRIES = 2;
 
 function App() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<TimingResult | null>(null);
+  // running 진입 직후 "시작!"을 덮어 보여주는 동안 true.
+  const [showGo, setShowGo] = useState(false);
   const startedAtRef = useRef(0);
+  const retriesRef = useRef(0);
+
+  // 재생 시점에 로드하면 광고가 늦게 뜨므로 앱 시작과 함께 예열해둔다.
+  useEffect(() => {
+    preloadInterstitial();
+  }, []);
 
   const start = useCallback(() => {
-    startedAtRef.current = performance.now();
     setResult(null);
-    setPhase("running");
+    setPhase("ready");
   }, []);
+
+  // "준비…" 1초 뒤 계측 페이즈로 넘어간다.
+  useEffect(() => {
+    if (phase !== "ready") return;
+    const id = setTimeout(() => {
+      setShowGo(true);
+      setPhase("running");
+    }, READY_MS);
+    return () => clearTimeout(id);
+  }, [phase]);
+
+  // 계측 시작 시각은 "시작!"이 실제로 화면에 그려지는 순간에 맞춘다.
+  // 타임아웃 콜백에서 바로 찍으면 페인트보다 한 프레임 빨라 체감과 어긋난다.
+  useEffect(() => {
+    if (phase !== "running") return;
+    // 백그라운드 탭 등으로 rAF가 안 뜨는 경우에도 이전 판의 시각이 남지 않도록 먼저 채운다.
+    startedAtRef.current = performance.now();
+    const frameId = requestAnimationFrame(() => {
+      startedAtRef.current = performance.now();
+    });
+    const timeoutId = setTimeout(() => setShowGo(false), GO_MS);
+    return () => {
+      cancelAnimationFrame(frameId);
+      clearTimeout(timeoutId);
+      setShowGo(false);
+    };
+  }, [phase]);
 
   const stop = useCallback(() => {
+    // 기록은 누른 순간에 확정한다. 뒤따르는 연출 시간은 절대 섞이지 않는다.
     const elapsed = performance.now() - startedAtRef.current;
     setResult(computeResult(elapsed));
-    setPhase("result");
+    setPhase("stopping");
   }, []);
+
+  // 계산 연출 후 결과 화면으로.
+  useEffect(() => {
+    if (phase !== "stopping") return;
+    const id = setTimeout(() => setPhase("result"), STOPPING_MS);
+    return () => clearTimeout(id);
+  }, [phase]);
 
   const retry = useCallback(() => {
-    setPhase("idle");
-    setResult(null);
+    setPhase("rewind");
   }, []);
 
-  // 결과가 나오면 조용히 토스 게임센터 리더보드에 점수를 제출한다.
-  // (미지원 환경에서는 내부적으로 no-op)
+  // 로딩 연출 → (2판마다) 전면광고 → 대기 화면.
+  // 연출과 광고를 동시에 돌리면 스피너가 보이기도 전에 광고가 덮으므로 순차 실행한다.
   useEffect(() => {
-    if (phase !== "result" || result == null) return;
-    void submitScore(result.score);
-  }, [phase, result]);
+    if (phase !== "rewind") return;
+    let cancelled = false;
+
+    retriesRef.current += 1;
+    const wantsAd = retriesRef.current % AD_EVERY_N_RETRIES === 0;
+
+    const id = setTimeout(() => {
+      void (async () => {
+        if (wantsAd) await showInterstitial();
+        if (cancelled) return;
+        setResult(null);
+        setPhase("idle");
+      })();
+    }, REWIND_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [phase]);
 
   return (
     <div className="app">
       <main className="stage">
         {phase === "idle" && <IdleScreen onStart={start} />}
-        {phase === "running" && <RunningScreen onStop={stop} />}
+        {phase === "ready" && <ReadyScreen />}
+        {phase === "running" && <RunningScreen onStop={stop} showGo={showGo} />}
+        {phase === "stopping" && <LoadingScreen message="기록을 재는 중이에요" />}
         {phase === "result" && result != null && (
           <ResultScreen result={result} onRetry={retry} />
+        )}
+        {phase === "rewind" && (
+          <LoadingScreen message="시간을 되돌리는 중이에요" />
         )}
       </main>
       <AdBanner />
@@ -73,7 +147,30 @@ function IdleScreen({ onStart }: { onStart: () => void }) {
   );
 }
 
-function RunningScreen({ onStop }: { onStop: () => void }) {
+function ReadyScreen() {
+  return (
+    <section className="screen screen--center">
+      <p className="count-ready">준비…</p>
+    </section>
+  );
+}
+
+function RunningScreen({
+  onStop,
+  showGo,
+}: {
+  onStop: () => void;
+  showGo: boolean;
+}) {
+  // "시작!"이 뜨는 순간이 곧 계측 시작이라, 그 사이엔 멈춤 버튼을 가려 오조작을 막는다.
+  if (showGo) {
+    return (
+      <section className="screen screen--center">
+        <p className="count-go">시작!</p>
+      </section>
+    );
+  }
+
   return (
     <section className="screen">
       <div className="hero">
@@ -91,6 +188,17 @@ function RunningScreen({ onStop }: { onStop: () => void }) {
       >
         멈춰!
       </button>
+    </section>
+  );
+}
+
+function LoadingScreen({ message }: { message: string }) {
+  return (
+    <section className="screen screen--center">
+      <span className="spinner" aria-hidden="true" />
+      <p className="loading-text" role="status">
+        {message}
+      </p>
     </section>
   );
 }

@@ -46,6 +46,79 @@
   gap: 44px;
 }
 
+/* 카운트다운·로딩처럼 요소가 적은 화면은 간격을 좁힌다. */
+.screen--center {
+  gap: 20px;
+  min-height: 260px;
+}
+
+/* ---------- 준비 → 시작 카운트다운 ---------- */
+.count-ready,
+.count-go {
+  margin: 0;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  animation: pop-in 0.18s ease-out both;
+}
+
+.count-ready {
+  font-size: 40px;
+  color: var(--sub);
+}
+
+.count-go {
+  font-size: 64px;
+  color: var(--primary);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ---------- 로딩(계산 중 · 되돌리는 중) ---------- */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 4px solid var(--line);
+  border-top-color: var(--primary);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-text {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sub);
+  text-align: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .count-ready,
+  .count-go {
+    animation: none;
+  }
+
+  .spinner {
+    animation: none;
+    border-top-color: var(--line);
+    border-right-color: var(--primary);
+  }
+}
+
 /* ---------- Hero / text ---------- */
 .hero {
   text-align: center;

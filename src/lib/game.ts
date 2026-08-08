@@ -1,4 +1,4 @@
-import { Game, Share, getSchemeUri } from "@apps-in-toss/web-framework";
+import { Share, getSchemeUri } from "@apps-in-toss/web-framework";
 
 /** 목표 시간: 정확히 10초 */
 export const TARGET_MS = 10_000;
@@ -10,16 +10,14 @@ export interface TimingResult {
   diffMs: number;
   /** 오차의 절댓값(ms) */
   absDiffMs: number;
-  /** 리더보드 점수. 정확할수록 높음(정확히 10초 = 10000점) */
-  score: number;
   /** 추정 상위 백분율(%). 작을수록 상위. 예: 8 → "상위 8%" */
   topPercent: number;
 }
 
 /**
  * 타이밍 오차로부터 "예상 상위 %"를 추정한다.
- * 토스 네이티브 리더보드는 실제 등수를 돌려주지 않으므로, 사람의 10초 체감
- * 오차 분포를 지수 CDF로 근사한 추정치다(실제 유저 분포 아님).
+ * 이 앱은 서버도 리더보드도 쓰지 않으므로, 사람의 10초 체감 오차 분포를
+ * 지수 CDF로 근사한 순수 로컬 추정치다(실제 유저 분포 아님).
  * 오차가 작을수록 상위(작은 %)가 된다.
  */
 export function estimateTopPercent(absDiffMs: number): number {
@@ -29,17 +27,14 @@ export function estimateTopPercent(absDiffMs: number): number {
   return Math.min(99, Math.max(0.1, pct));
 }
 
-/** 경과 시간으로부터 오차·점수·추정 상위%를 계산한다. */
+/** 경과 시간으로부터 오차·추정 상위%를 계산한다. */
 export function computeResult(elapsedMs: number): TimingResult {
   const diffMs = elapsedMs - TARGET_MS;
   const absDiffMs = Math.abs(diffMs);
-  // 오차가 작을수록 높은 점수. 리더보드는 높은 점수가 상위이므로 이렇게 변환한다.
-  const score = Math.max(0, TARGET_MS - absDiffMs);
   return {
     elapsedMs,
     diffMs,
     absDiffMs,
-    score,
     topPercent: estimateTopPercent(absDiffMs),
   };
 }
@@ -135,47 +130,6 @@ export function pickGrade(absDiffMs: number): Grade {
   const tier = GRADE_TIERS.find((t) => absDiffMs < t.max);
   const options = tier ? tier.options : WORST_GRADES;
   return options[Math.floor(Math.random() * options.length)];
-}
-
-/**
- * 현재 환경(토스앱)에서 게임센터 리더보드를 쓸 수 있는지 여부.
- * 브라우저 등 미지원 환경에서는 false.
- */
-export function isLeaderboardSupported(): boolean {
-  try {
-    return (
-      Game.setLeaderboardScore.isSupported() &&
-      Game.openLeaderboard.isSupported()
-    );
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 점수를 토스 게임센터 리더보드에 제출한다.
- * 미지원 환경이거나 실패하면 false를 반환한다.
- */
-export async function submitScore(score: number): Promise<boolean> {
-  try {
-    if (!Game.setLeaderboardScore.isSupported()) return false;
-    // score는 실수형 숫자의 "문자열"이어야 한다.
-    const res = await Game.setLeaderboardScore({ score: score.toFixed(2) });
-    return res != null;
-  } catch (error) {
-    console.error("리더보드 점수 제출 실패:", error);
-    return false;
-  }
-}
-
-/** 토스 게임센터 리더보드 네이티브 화면을 연다. */
-export async function openLeaderboard(): Promise<void> {
-  try {
-    if (!Game.openLeaderboard.isSupported()) return;
-    await Game.openLeaderboard();
-  } catch (error) {
-    console.error("리더보드 열기 실패:", error);
-  }
 }
 
 /**
