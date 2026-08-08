@@ -261,8 +261,11 @@
   min-height: 0;
 }
 
+/* SDK가 붙이는 래퍼는 height:100%라서 부모에 확정 높이가 필요하다.
+   min-height만 주면 퍼센트 높이가 auto로 풀려 배너가 접힌다.
+   광고가 없을 땐(:empty) 높이 0으로 빈 여백을 남기지 않는다. */
 .ad-banner:not(:empty) {
-  min-height: 96px;
+  height: 96px;
   border-top: 1px solid var(--line);
 }
 
