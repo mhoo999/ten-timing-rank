@@ -52,6 +52,16 @@
   min-height: 260px;
 }
 
+/* 준비 → 시작! → 안내 문구로 내용이 바뀌어도 멈춤 버튼이 위아래로 움직이면
+   안 된다. 세 상태 중 가장 높은 안내 문구(약 100px)를 덮는 높이로 고정하고
+   그 안에서 가운데 정렬한다. */
+.play-hero {
+  min-height: 104px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* ---------- 준비 → 시작 카운트다운 ---------- */
 .count-ready,
 .count-go {
@@ -172,6 +182,8 @@
 
 /* ---------- Big circular buttons (flat) ---------- */
 .big-btn {
+  position: relative;
+  overflow: hidden;
   width: 200px;
   height: 200px;
   border: none;
@@ -202,10 +214,54 @@
 
 .big-btn--stop {
   background: var(--stop);
+  /* 버튼이 켜지는 순간이 출발 신호라 색 전환을 페이드 없이 즉시 바꾼다. */
+  transition: transform 0.1s ease;
 }
 
 .big-btn--stop:active {
   background: var(--stop-press);
+}
+
+/* 준비 단계: 자리는 잡되 아직 누를 수 없다는 걸 색으로 알린다.
+   라벨은 var(--sub) 대신 진한 텍스트색을 쓴다 — 게이지가 다 차오르면 라벨 뒤가
+   빨강이 되는데, 회색 라벨은 그 위에서 대비가 무너지기 때문. */
+.big-btn:disabled {
+  background: var(--section);
+  color: var(--text);
+  cursor: default;
+}
+
+.big-btn:disabled:active {
+  transform: none;
+}
+
+.big-btn-label {
+  position: relative;
+  z-index: 1;
+}
+
+/* 준비 ~ 0초까지 버튼이 아래에서부터 차오른다. 다 차는 순간이 곧 출발 신호라
+   linear로 등속 진행시켜 사용자가 도달 시점을 예측할 수 있게 한다.
+   height가 아니라 scaleY라서 레이아웃을 건드리지 않고 합성만으로 돈다.
+   지속 시간은 CHARGE_MS를 인라인 스타일로 받아 JS 타이머와 어긋나지 않게 한다. */
+.big-btn-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--stop);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  animation-name: fill-up;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes fill-up {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
 }
 
 /* ---------- Result ---------- */
