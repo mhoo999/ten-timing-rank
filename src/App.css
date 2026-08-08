@@ -258,10 +258,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 20px 16px;
   border-radius: 14px;
   background: var(--section);
+  /* 스피너 → 등수로 바뀔 때 카드 높이가 튀지 않도록 두 상태 모두를 덮는 높이.
+     등수 상태의 실제 높이(값 44 + gap 4 + 캡션 21 + 패딩 40 ≈ 109px)보다 살짝 크게 잡는다. */
+  min-height: 112px;
 }
 
 .result-rank-label {

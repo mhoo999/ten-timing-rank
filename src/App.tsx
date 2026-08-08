@@ -11,14 +11,14 @@ import {
 } from "./lib/game";
 import { preloadInterstitial, showInterstitial } from "./lib/interstitialAd";
 
-type Phase = "idle" | "ready" | "running" | "stopping" | "result" | "rewind";
+type Phase = "idle" | "ready" | "running" | "result" | "rewind";
 
 /** "준비…" 노출 시간. 이 뒤에 "시작!"이 뜨면서 계측이 시작된다. */
 const READY_MS = 1000;
 /** running 진입 후 "시작!"을 띄워두는 시간. */
 const GO_MS = 600;
-/** 멈춤 → 결과 사이의 계산 연출 시간. 기록에는 섞이지 않는다. */
-const STOPPING_MS = 700;
+/** 결과 화면에서 등수 칸만 스피너를 돌리는 시간. 기록에는 섞이지 않는다. */
+const RANK_REVEAL_MS = 700;
 /** 다시하기 → (광고) → 대기 사이의 로딩 연출 시간. */
 const REWIND_MS = 900;
 /** 다시하기 N회마다 전면광고를 1회 노출한다. */
@@ -73,15 +73,8 @@ function App() {
     // 기록은 누른 순간에 확정한다. 뒤따르는 연출 시간은 절대 섞이지 않는다.
     const elapsed = performance.now() - startedAtRef.current;
     setResult(computeResult(elapsed));
-    setPhase("stopping");
+    setPhase("result");
   }, []);
-
-  // 계산 연출 후 결과 화면으로.
-  useEffect(() => {
-    if (phase !== "stopping") return;
-    const id = setTimeout(() => setPhase("result"), STOPPING_MS);
-    return () => clearTimeout(id);
-  }, [phase]);
 
   const retry = useCallback(() => {
     setPhase("rewind");
@@ -117,7 +110,6 @@ function App() {
         {phase === "idle" && <IdleScreen onStart={start} />}
         {phase === "ready" && <ReadyScreen />}
         {phase === "running" && <RunningScreen onStop={stop} showGo={showGo} />}
-        {phase === "stopping" && <LoadingScreen message="기록을 재는 중이에요" />}
         {phase === "result" && result != null && (
           <ResultScreen result={result} onRetry={retry} />
         )}
@@ -213,6 +205,14 @@ function ResultScreen({
   const early = result.diffMs < 0;
   // 결과당 한 번만 뽑아 리렌더에도 문구가 바뀌지 않게 한다.
   const verdict = useMemo(() => pickGrade(result.absDiffMs), [result]);
+  // 기록은 즉시 보여주고 등수 칸만 잠깐 스피너를 돌린다.
+  const [rankReady, setRankReady] = useState(false);
+
+  useEffect(() => {
+    setRankReady(false);
+    const id = setTimeout(() => setRankReady(true), RANK_REVEAL_MS);
+    return () => clearTimeout(id);
+  }, [result]);
 
   return (
     <section className="screen">
@@ -228,12 +228,20 @@ function ResultScreen({
             : `10초보다 ${toSeconds(result.absDiffMs, 4)}초 ${early ? "빨랐어요" : "늦었어요"}`}
         </p>
 
-        {/* 2) 추정 상위/하위 % */}
+        {/* 2) 추정 상위/하위 % — 잠깐 스피너를 돌린 뒤 공개한다 */}
         <div className="result-rank">
-          <span className="result-rank-value">{formatRank(result.topPercent)}</span>
-          <span className="result-rank-caption">
-            {verdict.emoji} {verdict.label}
-          </span>
+          {rankReady ? (
+            <>
+              <span className="result-rank-value">
+                {formatRank(result.topPercent)}
+              </span>
+              <span className="result-rank-caption">
+                {verdict.emoji} {verdict.label}
+              </span>
+            </>
+          ) : (
+            <span className="spinner" aria-label="등수 계산 중" role="status" />
+          )}
         </div>
       </div>
 

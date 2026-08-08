@@ -23,7 +23,7 @@ An empty live ID stays a supported state: `preloadInterstitial`/`showInterstitia
 
 ## Structure
 
-- `src/App.tsx` — the whole UI. Phase machine `idle → ready → running → stopping → result → rewind → idle`, `useState`; elapsed time from `performance.now()` via `startedAtRef`. Screens are local components (`IdleScreen`, `ReadyScreen`, `RunningScreen`, `LoadingScreen`, `ResultScreen`).
+- `src/App.tsx` — the whole UI. Phase machine `idle → ready → running → result → rewind → idle`, `useState`; elapsed time from `performance.now()` via `startedAtRef`. Screens are local components (`IdleScreen`, `ReadyScreen`, `RunningScreen`, `LoadingScreen`, `ResultScreen`).
 - `src/lib/game.ts` — all scoring, ranking, and share logic. Pure functions + SDK wrappers that swallow failures. **Put logic here, not in App.tsx.**
 - `src/lib/interstitialAd.ts` — 전면광고 preload/show 래퍼. `showInterstitial()` **never rejects** (미지원·미로드·실패·4s 타임아웃 모두 resolve) so the game loop can never stall behind an ad.
 - `src/components/AdBanner.tsx` — persistent banner below `<main>`, mounted once for all phases.
@@ -31,7 +31,9 @@ An empty live ID stays a supported state: `preloadInterstitial`/`showInterstitia
 
 ### 페이즈 타이밍 — 계측 정확도가 걸려 있다
 
-`ready`(준비… 1.0s) → `running` 진입 순간이 계측 시작이다. `startedAtRef`는 running 진입 effect에서 동기적으로 한 번 찍고 `requestAnimationFrame`에서 다시 덮어쓴다 — rAF 쪽이 "시작!"이 실제 그려지는 시점에 더 가깝고, 동기 대입은 백그라운드 탭에서 rAF가 안 뜰 때의 폴백이다. **연출 시간(준비 1.0s, 멈춤 후 스피너 0.7s, 다시하기 로딩 0.9s)은 기록에 절대 섞이면 안 된다** — `stop()`이 클릭 순간에 elapsed를 확정하기 때문. 3.0초를 눌렀을 때 결과가 2.0초로 나오는지가 이 불변식의 회귀 테스트다.
+`ready`(준비… 1.0s) → `running` 진입 순간이 계측 시작이다. `startedAtRef`는 running 진입 effect에서 동기적으로 한 번 찍고 `requestAnimationFrame`에서 다시 덮어쓴다 — rAF 쪽이 "시작!"이 실제 그려지는 시점에 더 가깝고, 동기 대입은 백그라운드 탭에서 rAF가 안 뜰 때의 폴백이다. **연출 시간(준비 1.0s, 등수 공개 0.7s, 다시하기 로딩 0.9s)은 기록에 절대 섞이면 안 된다** — `stop()`이 클릭 순간에 elapsed를 확정하기 때문. 3.0초를 눌렀을 때 결과가 2.0초로 나오는지가 이 불변식의 회귀 테스트다.
+
+멈춤 직후 결과 화면은 **즉시** 뜨고, `.result-rank` 칸만 `RANK_REVEAL_MS`(0.7s) 동안 스피너를 돌린 뒤 등수를 공개한다. `.result-rank`의 `min-height: 112px`는 두 상태의 높이를 같게 맞춰 카드가 튀지 않게 하는 값이라 등수 폰트 크기를 바꾸면 같이 재봐야 한다.
 
 전면광고는 다시하기 **2회마다** 1회(`AD_EVERY_N_RETRIES`). 광고는 네이티브 오버레이라 그 위에 텍스트를 못 얹으므로, "시간을 되돌리는 중이에요"는 광고 직전 우리 `rewind` 화면에 뜬다. 광고가 없는 판에도 같은 로딩 화면을 거쳐 전환 흐름을 일정하게 유지한다.
 
